@@ -32,7 +32,7 @@ type FileCache struct {
 }
 
 // Create a new cache with the given upper and lower LFU limits.
-func NewFileCache(upper, lower int) *FileCache {
+func NewCache(upper, lower int) *FileCache {
 	c := FileCache{
 		cache: lfu.New(),
 	}
