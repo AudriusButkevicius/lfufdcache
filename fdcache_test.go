@@ -20,13 +20,6 @@ func TestSingleFileEviction(t *testing.T) {
 	}
 	fd.Close()
 
-	defer func() {
-		err := os.Remove(fd.Name())
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
-
 	for k := 0; k < 100; k++ {
 		wg.Add(1)
 		go func() {
@@ -39,7 +32,7 @@ func TestSingleFileEviction(t *testing.T) {
 			}
 			defer cfd.Close()
 
-			_, err = cfd.Write([]byte(cfd.Name()))
+			_, err = cfd.ReadAt([]byte{}, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -47,7 +40,6 @@ func TestSingleFileEviction(t *testing.T) {
 	}
 
 	wg.Wait()
-	c.Close()
 }
 
 func TestMultifileEviction(t *testing.T) {
@@ -75,7 +67,7 @@ func TestMultifileEviction(t *testing.T) {
 			}
 			defer cfd.Close()
 
-			_, err = cfd.Write([]byte(cfd.Name()))
+			_, err = cfd.ReadAt([]byte{}, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -83,14 +75,13 @@ func TestMultifileEviction(t *testing.T) {
 	}
 
 	wg.Wait()
-	c.Close()
 }
 
 func TestMixedEviction(t *testing.T) {
 	c := NewFileCache(1, 1)
 
 	wg := sync.WaitGroup{}
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 100; i++ {
 		fd, err := ioutil.TempFile("", "fdcache")
 		if err != nil {
 			t.Fatal(err)
@@ -98,14 +89,7 @@ func TestMixedEviction(t *testing.T) {
 		}
 		fd.Close()
 
-		defer func() {
-			err := os.Remove(fd.Name())
-			if err != nil {
-				t.Fatal(err)
-			}
-		}()
-
-		for k := 0; k < 50; k++ {
+		for k := 0; k < 100; k++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -117,7 +101,7 @@ func TestMixedEviction(t *testing.T) {
 				}
 				defer cfd.Close()
 
-				_, err = cfd.Write([]byte(cfd.Name()))
+				_, err = cfd.ReadAt([]byte{}, 0)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -126,5 +110,4 @@ func TestMixedEviction(t *testing.T) {
 	}
 
 	wg.Wait()
-	c.Close()
 }
