@@ -28,7 +28,7 @@ func (f *CachedFile) ReadAt(buf []byte, at int64) (int, error) {
 
 type FileCache struct {
 	cache *lfu.Cache
-	mut   sync.Mutex // Protects against races between concurrent opens
+	mut   sync.RWMutex // Protects against races between concurrent opens
 }
 
 // Create a new cache with the given upper and lower LFU limits.
@@ -57,17 +57,19 @@ func NewFileCache(upper, lower int) *FileCache {
 // Open and cache a file descriptor or use an existing cached descriptor for
 // the given path.
 func (c *FileCache) Open(path string) (*CachedFile, error) {
-	// We can only open one file at a time, in order not to trigger any
-	// evictions between c.cache.Get, and cfd.wg.Add
-	c.mut.Lock()
-	defer c.mut.Unlock()
-
+	// Evictions can only happen during c.cache.Set, and there is a potential
+	// race between c.cache.Get and cfd.wg.Add where if not guarded by a mutex
+	// could result in cfd getting closed before the counter is incremented if
+	// a concurrent routine does a c.cache.Set
+	c.mut.RLock()
 	fdi := c.cache.Get(path)
 	if fdi != nil {
 		cfd := fdi.(*CachedFile)
 		cfd.wg.Add(1)
+		c.mut.RUnlock()
 		return cfd, nil
 	}
+	c.mut.RUnlock()
 
 	fd, err := os.Open(path)
 	if err != nil {
@@ -78,6 +80,8 @@ func (c *FileCache) Open(path string) (*CachedFile, error) {
 		wg:   sync.WaitGroup{},
 	}
 	cfd.wg.Add(1)
+	c.mut.Lock()
 	c.cache.Set(path, cfd)
+	c.mut.Unlock()
 	return cfd, nil
 }
