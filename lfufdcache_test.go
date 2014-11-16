@@ -1,4 +1,4 @@
-package fdcache
+package lfufdcache
 
 import (
 	"io/ioutil"
@@ -24,7 +24,7 @@ func TestNoopReadFailsOnClosed(t *testing.T) {
 }
 
 func TestSingleFileEviction(t *testing.T) {
-	c := NewFileCache(1, 1)
+	c := NewCache(1, 1)
 
 	wg := sync.WaitGroup{}
 
@@ -60,7 +60,7 @@ func TestSingleFileEviction(t *testing.T) {
 }
 
 func TestMultifileEviction(t *testing.T) {
-	c := NewFileCache(1, 1)
+	c := NewCache(1, 1)
 
 	wg := sync.WaitGroup{}
 
@@ -97,7 +97,7 @@ func TestMultifileEviction(t *testing.T) {
 }
 
 func TestMixedEviction(t *testing.T) {
-	c := NewFileCache(1, 1)
+	c := NewCache(1, 1)
 
 	wg := sync.WaitGroup{}
 	for i := 0; i < 100; i++ {
