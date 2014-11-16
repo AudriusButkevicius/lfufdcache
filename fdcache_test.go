@@ -8,6 +8,21 @@ import (
 	"testing"
 )
 
+func TestNoopReadFailsOnClosed(t *testing.T) {
+	fd, err := ioutil.TempFile("", "fdcache")
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	fd.WriteString("test")
+	fd.Close()
+	buf := make([]byte, 4)
+	_, err = fd.ReadAt(buf, 0)
+	if err == nil {
+		t.Fatal("Expected error")
+	}
+}
+
 func TestSingleFileEviction(t *testing.T) {
 	c := NewFileCache(1, 1)
 
@@ -18,7 +33,9 @@ func TestSingleFileEviction(t *testing.T) {
 		t.Fatal(err)
 		return
 	}
+	fd.WriteString("test")
 	fd.Close()
+	buf := make([]byte, 4)
 
 	for k := 0; k < 100; k++ {
 		wg.Add(1)
@@ -32,7 +49,7 @@ func TestSingleFileEviction(t *testing.T) {
 			}
 			defer cfd.Close()
 
-			_, err = cfd.ReadAt([]byte{}, 0)
+			_, err = cfd.ReadAt(buf, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -57,7 +74,9 @@ func TestMultifileEviction(t *testing.T) {
 				t.Fatal(err)
 				return
 			}
+			fd.WriteString("test")
 			fd.Close()
+			buf := make([]byte, 4)
 			defer os.Remove(fd.Name())
 
 			cfd, err := c.Open(fd.Name())
@@ -67,7 +86,7 @@ func TestMultifileEviction(t *testing.T) {
 			}
 			defer cfd.Close()
 
-			_, err = cfd.ReadAt([]byte{}, 0)
+			_, err = cfd.ReadAt(buf, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -88,7 +107,9 @@ func TestMixedEviction(t *testing.T) {
 				t.Fatal(err)
 				return
 			}
+			fd.WriteString("test")
 			fd.Close()
+			buf := make([]byte, 4)
 
 			for k := 0; k < 100; k++ {
 				wg.Add(1)
@@ -102,7 +123,7 @@ func TestMixedEviction(t *testing.T) {
 					}
 					defer cfd.Close()
 
-					_, err = cfd.ReadAt([]byte{}, 0)
+					_, err = cfd.ReadAt(buf, 0)
 					if err != nil {
 						t.Fatal(err)
 					}
