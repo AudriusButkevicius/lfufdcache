@@ -82,31 +82,33 @@ func TestMixedEviction(t *testing.T) {
 
 	wg := sync.WaitGroup{}
 	for i := 0; i < 100; i++ {
-		fd, err := ioutil.TempFile("", "fdcache")
-		if err != nil {
-			t.Fatal(err)
-			return
-		}
-		fd.Close()
+		go func() {
+			fd, err := ioutil.TempFile("", "fdcache")
+			if err != nil {
+				t.Fatal(err)
+				return
+			}
+			fd.Close()
 
-		for k := 0; k < 100; k++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			for k := 0; k < 100; k++ {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
 
-				cfd, err := c.Open(fd.Name())
-				if err != nil {
-					t.Fatal(err)
-					return
-				}
-				defer cfd.Close()
+					cfd, err := c.Open(fd.Name())
+					if err != nil {
+						t.Fatal(err)
+						return
+					}
+					defer cfd.Close()
 
-				_, err = cfd.ReadAt([]byte{}, 0)
-				if err != nil {
-					t.Fatal(err)
-				}
-			}()
-		}
+					_, err = cfd.ReadAt([]byte{}, 0)
+					if err != nil {
+						t.Fatal(err)
+					}
+				}()
+			}
+		}()
 	}
 
 	wg.Wait()
